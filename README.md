@@ -21,6 +21,11 @@ Notes:
 pip install git+https://github.com/hmmlearn/hmmlearn.git
 ```
 
+or execute:
+```
+conda install -c omnia hmmlearn
+```
+
 ### Code
 
 A template notebook is provided as `asl_recognizer.ipynb`. The notebook is a combination tutorial and submission document.  Some of the codebase and some of your implementation will be external to the notebook. For submission, complete the **Submission** sections of each part.  This will include running your implementations in code notebook cells, answering analysis questions, and passing provided unit tests provided in the codebase and called out in the notebook. 
