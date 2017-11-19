@@ -76,8 +76,20 @@ class SelectorBIC(ModelSelector):
         """
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection based on BIC scores
-        raise NotImplementedError
+        # implement model selection based on BIC scores
+        models = list()
+        n = sum(self.lengths)
+        for num_states in range(self.min_n_components, (self.max_n_components + 1)):
+            hmm_model = self.base_model(num_states)
+            LL = hmm_model.score(self.X, self.lengths)
+            free_params = (num_states**2) + (2 * num_states * n) - 1
+            BIC = (-2 * LL) + (free_params * np.log(n))
+            models.append((BIC, hmm_model))
+
+        # finding out the best in the model storage
+        best_score, best_model = max(models, key=lambda x: x[0])
+
+        return best_model
 
 
 class SelectorDIC(ModelSelector):
