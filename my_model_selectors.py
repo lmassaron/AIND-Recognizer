@@ -117,9 +117,15 @@ class SelectorCV(ModelSelector):
 
                 self.X = X_train
                 self.lengths = train_len
-                hmm_model = self.base_model(num_states)
-                cv_results.append(hmm_model.score(X_test, test_len))
-            models.append((np.mean(cv_results), hmm_model))
+
+                try:
+                    hmm_model = self.base_model(num_states)
+                    cv_results.append(hmm_model.score(X_test, test_len))
+                except Exception as e:
+                    pass
+            if len(cv_results) > 0:
+                #print(np.mean(cv_results), num_states, len(self.sequences))
+                models.append((np.mean(cv_results), hmm_model))
         best_score, best_model = max(models, key = lambda x: x[0])
         return best_model
 
