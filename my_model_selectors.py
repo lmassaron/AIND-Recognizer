@@ -98,12 +98,30 @@ class SelectorDIC(ModelSelector):
 
 
 class SelectorCV(ModelSelector):
-    ''' select best model based on average log Likelihood of cross-validation folds
-
-    '''
+    """
+    select best model based on average log Likelihood of cross-validation folds
+    """
 
     def select(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection using CV
-        raise NotImplementedError
+        # implement model selection using CV
+        models = list()
+        for num_states in range(self.min_n_components, (self.max_n_components + 1)):
+            split_method = KFold(n_splits=min(3, len(self.sequences)), shuffle=False, random_state=self.random_state)
+            cv_results = list()
+            for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
+                # recombining train and test sequences according to split method
+                X_train, train_len = combine_sequences(cv_train_idx, self.sequences)
+                X_test, test_len = combine_sequences(cv_test_idx, self.sequences)
+
+                self.X = X_train
+                self.lengths = train_len
+                hmm_model = self.base_model(num_states)
+                cv_results.append(hmm_model.score(X_test, test_len))
+            models.append((np.mean(cv_results), hmm_model))
+        best_score, best_model = max(models, key = lambda x: x[0])
+        return best_model
+
+
+
