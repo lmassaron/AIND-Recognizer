@@ -1,5 +1,4 @@
 import warnings
-import operator
 from asl_data import SinglesData
 
 
@@ -36,6 +35,6 @@ def recognize(models: dict, test_set: SinglesData):
             except Exception as e: # if it is a fail, record highest error
                 LL[word] = float("-inf")
         probabilities.append(LL)
-        guesses.append(max(LL.iteritems(), key=operator.itemgetter(1))[0])
+        guesses.append(max(LL, key=LL.get))
 
     return probabilities, guesses

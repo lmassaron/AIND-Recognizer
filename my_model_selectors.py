@@ -88,8 +88,8 @@ class SelectorBIC(ModelSelector):
                 free_params = (num_states**2) + (2 * num_states * n) - 1
                 BIC = (-2 * LL) + (free_params * np.log(n))
                 models.append((BIC, hmm_model))
-            except Exception as e:  # if it is a fail, pass by
-                pass
+            except Exception as e:  # if it is a fail, record highest error
+                models.append((float("-inf"), hmm_model))
 
         # finding out the best in the model storage
         # this is a minimization problem
@@ -133,8 +133,8 @@ class SelectorDIC(ModelSelector):
 
                 models.append((LL - np.mean(adv_scores), hmm_model))
 
-            except Exception as e:  # if it is a fail, pass by
-                pass
+            except Exception as e:  # if it is a fail, record highest error
+                models.append((float("-inf"), hmm_model))
 
         # finding out the best in the model storage
         # this is a maximization problem
@@ -158,26 +158,33 @@ class SelectorCV(ModelSelector):
         models = list()
         for num_states in range(self.min_n_components, (self.max_n_components + 1)):
 
-            # Setting the split method
-            try:
-                split_method = KFold(n_splits=min(3, len(self.sequences)), shuffle=False, random_state=self.random_state)
-                cv_results = list()
+            cv_results = list()
 
-                for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
-                    # recombining train and test sequences according to split method
-                    X_train, train_len = combine_sequences(cv_train_idx, self.sequences)
-                    X_test, test_len = combine_sequences(cv_test_idx, self.sequences)
+            if len(self.sequences) == 1:
+                hmm_model = self.base_model(num_states)
+                try:
+                    cv_results.append(hmm_model.score(self.X, self.lengths))
+                except Exception as e:  # if it is a fail, pass by
+                    cv_results.append(float("-inf"))
+            else:
+                # Setting the split method
+                try:
+                    split_method = KFold(n_splits=min(3, len(self.sequences)), shuffle=False, random_state=self.random_state)
+                    for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
+                        # recombining train and test sequences according to split method
+                        X_train, train_len = combine_sequences(cv_train_idx, self.sequences)
+                        X_test, test_len = combine_sequences(cv_test_idx, self.sequences)
 
-                    # setting X and lenghts
-                    self.X = X_train
-                    self.lengths = train_len
+                        # setting X and lenghts
+                        self.X = X_train
+                        self.lengths = train_len
 
-                    # trying to model the splitted data
-                    hmm_model = self.base_model(num_states)
-                    cv_results.append(hmm_model.score(X_test, test_len))
+                        # trying to model the splitted data
+                        hmm_model = self.base_model(num_states)
+                        cv_results.append(hmm_model.score(X_test, test_len))
 
-            except Exception as e:  # if it is a fail, pass by
-                pass
+                except Exception as e:  # if it is a fail, pass by
+                    pass
 
             if len(cv_results) > 0: # if no cv results are available, num_states is not testable
                 # adding mean cv log likelyhood to the model storage
