@@ -124,22 +124,21 @@ class SelectorDIC(ModelSelector):
             try:
                 hmm_model = self.base_model(num_states)
                 LL = hmm_model.score(self.X, self.lengths)
-                models.append((LL, hmm_model))
+
+                adv_scores = list()
+                for word in self.words:
+                    if word != self.this_word:
+                        adv_X, adv_len = self.hwords[word]
+                        adv_scores.append(hmm_model.score(adv_X, adv_len))
+
+                models.append((LL - np.mean(adv_scores), hmm_model))
+
             except Exception as e:  # if it is a fail, pass by
                 pass
 
-        comparison = list()
-        for index, (LL, hmm_model) in enumerate(models):
-            adv_scores = list()
-            for word in self.words:
-                if word != self.this_word:
-                    adv_X, adv_len = self.hwords[word]
-                    adv_scores.append(hmm_model.score(adv_X, adv_len))
-            comparison.append((LL - np.mean(adv_scores), hmm_model))
-
         # finding out the best in the model storage
         # this is a maximization problem
-        best_score, best_model = max(comparison, key=lambda x: x[0])
+        best_score, best_model = max(models, key=lambda x: x[0])
         return best_model
 
 
