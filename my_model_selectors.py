@@ -62,14 +62,16 @@ class SelectorConstant(ModelSelector):
 
 
 class SelectorBIC(ModelSelector):
-    """ select the model with the lowest Bayesian Information Criterion(BIC) score
+    """ 
+    select the model with the lowest Bayesian Information Criterion(BIC) score
 
     http://www2.imm.dtu.dk/courses/02433/doc/ch6_slides.pdf
     Bayesian information criteria: BIC = -2 * logL + p * logN
     """
 
     def select(self):
-        """ select the best model for self.this_word based on
+        """ 
+        select the best model for self.this_word based on
         BIC score for n between self.min_n_components and self.max_n_components
 
         :return: GaussianHMM object
@@ -80,33 +82,65 @@ class SelectorBIC(ModelSelector):
         models = list()
         n = sum(self.lengths)
         for num_states in range(self.min_n_components, (self.max_n_components + 1)):
-            hmm_model = self.base_model(num_states)
-            LL = hmm_model.score(self.X, self.lengths)
-            free_params = (num_states**2) + (2 * num_states * n) - 1
-            BIC = (-2 * LL) + (free_params * np.log(n))
-            models.append((BIC, hmm_model))
+            try:
+                hmm_model = self.base_model(num_states)
+                LL = hmm_model.score(self.X, self.lengths)
+                free_params = (num_states**2) + (2 * num_states * n) - 1
+                BIC = (-2 * LL) + (free_params * np.log(n))
+                models.append((BIC, hmm_model))
+            except Exception as e:  # if it is a fail, pass by
+                pass
 
         # finding out the best in the model storage
-        best_score, best_model = max(models, key=lambda x: x[0])
+        # this is a minimization problem
+        best_score, best_model = min(models, key=lambda x: x[0])
 
         return best_model
 
 
 class SelectorDIC(ModelSelector):
-    ''' select best model based on Discriminative Information Criterion
+    """
+    select best model based on Discriminative Information Criterion
 
     Biem, Alain. "A model selection criterion for classification: Application to hmm topology optimization."
     Document Analysis and Recognition, 2003. Proceedings. Seventh International Conference on. IEEE, 2003.
     http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.58.6208&rep=rep1&type=pdf
     https://pdfs.semanticscholar.org/ed3d/7c4a5f607201f3848d4c02dd9ba17c791fc2.pdf
     DIC = log(P(X(i)) - 1/(M-1)SUM(log(P(X(all but i))
-    '''
+    
+    """
 
     def select(self):
+        """
+        
+        :return: GaussianHMM object 
+        """
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection based on DIC scores
-        raise NotImplementedError
+        # implement model selection based on Discriminative Information Criterion
+
+        models = list()
+        for num_states in range(self.min_n_components, self.max_n_components + 1):
+            try:
+                hmm_model = self.base_model(num_states)
+                LL = hmm_model.score(self.X, self.lengths)
+                models.append((LL, hmm_model))
+            except Exception as e:  # if it is a fail, pass by
+                pass
+
+        comparison = list()
+        for index, (LL, hmm_model) in enumerate(models):
+            adv_scores = list()
+            for word in self.words:
+                if word != self.this_word:
+                    adv_X, adv_len = self.hwords[word]
+                    adv_scores.append(hmm_model.score(adv_X, adv_len))
+            comparison.append((LL - np.mean(adv_scores), hmm_model))
+
+        # finding out the best in the model storage
+        # this is a maximization problem
+        best_score, best_model = max(comparison, key=lambda x: x[0])
+        return best_model
 
 
 class SelectorCV(ModelSelector):
@@ -115,6 +149,10 @@ class SelectorCV(ModelSelector):
     """
 
     def select(self):
+        """
+        
+        :return: GaussianHMM object
+        """
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # implement model selection using CV
@@ -146,6 +184,7 @@ class SelectorCV(ModelSelector):
                 models.append((np.mean(cv_results), hmm_model))
 
         # finding out the best in the model storage
+        # this is a maximization problem
         best_score, best_model = max(models, key=lambda x: x[0])
 
         return best_model
