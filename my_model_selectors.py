@@ -159,24 +159,25 @@ class SelectorCV(ModelSelector):
         for num_states in range(self.min_n_components, (self.max_n_components + 1)):
 
             # Setting the split method
-            split_method = KFold(n_splits=min(3, len(self.sequences)), shuffle=False, random_state=self.random_state)
-            cv_results = list()
+            try:
+                split_method = KFold(n_splits=min(3, len(self.sequences)), shuffle=False, random_state=self.random_state)
+                cv_results = list()
 
-            for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
-                # recombining train and test sequences according to split method
-                X_train, train_len = combine_sequences(cv_train_idx, self.sequences)
-                X_test, test_len = combine_sequences(cv_test_idx, self.sequences)
+                for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
+                    # recombining train and test sequences according to split method
+                    X_train, train_len = combine_sequences(cv_train_idx, self.sequences)
+                    X_test, test_len = combine_sequences(cv_test_idx, self.sequences)
 
-                # setting X and lenghts
-                self.X = X_train
-                self.lengths = train_len
+                    # setting X and lenghts
+                    self.X = X_train
+                    self.lengths = train_len
 
-                # trying to model the splitted data
-                try:
+                    # trying to model the splitted data
                     hmm_model = self.base_model(num_states)
                     cv_results.append(hmm_model.score(X_test, test_len))
-                except Exception as e: # if it is a fail, pass by
-                    pass
+
+            except Exception as e:  # if it is a fail, pass by
+                pass
 
             if len(cv_results) > 0: # if no cv results are available, num_states is not testable
                 # adding mean cv log likelyhood to the model storage
